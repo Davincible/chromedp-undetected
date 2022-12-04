@@ -18,7 +18,7 @@ type Chrome struct {
 	actions []chromedp.Action
 }
 
-func New(config Config) Chrome {
+func New(config Config) (Chrome, context.CancelFunc) {
 	c := Chrome{config: config}
 
 	port := strconv.Itoa(c.config.Port)
@@ -58,7 +58,7 @@ func New(config Config) Chrome {
 	}
 	ctx, cancelA := chromedp.NewExecAllocator(ctx, opts...)
 	ctx, cancelC := chromedp.NewContext(ctx, c.config.ContextOptions...)
-	c.cancel = func() {
+	cancel := func() {
 		cancelT()
 		cancelA()
 		cancelC()
@@ -66,7 +66,7 @@ func New(config Config) Chrome {
 
 	c.ctx = ctx
 
-	return c
+	return c, cancel
 }
 
 func (c *Chrome) Run(actions ...chromedp.Action) error {
