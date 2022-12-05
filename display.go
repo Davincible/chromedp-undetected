@@ -35,13 +35,6 @@ type frameBuffer struct {
 	cmd *exec.Cmd
 }
 
-// frameBufferOptions describes the options that can be used to create a frame buffer.
-type frameBufferOptions struct {
-	// ScreenSize is the option for the frame buffer screen size.
-	// This is of the form "{width}x{height}[x{depth}]".  For example: "1024x768x24"
-	ScreenSize string
-}
-
 // newFrameBuffer starts an X virtual frame buffer running in the background.
 // FrameBufferOptions may be populated to change the behavior of the frame buffer.
 func newFrameBuffer(screenSize string) (*frameBuffer, error) { //nolint:funlen
