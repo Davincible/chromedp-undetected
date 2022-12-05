@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/chromedp/chromedp"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestChromedpundetected(t *testing.T) {
@@ -14,11 +14,11 @@ func TestChromedpundetected(t *testing.T) {
 		WithHeadless(),
 	))
 	defer cancel()
-	assert.NoError(t, err)
+	require.NoError(t, err, "create new context")
 
 	err = chromedp.Run(ctx,
 		chromedp.Navigate("https://nowsecure.nl"),
 		chromedp.WaitVisible(`//div[@class="hystericalbg"]`),
 	)
-	assert.NoError(t, err)
+	require.NoError(t, err, "chromedp run")
 }
