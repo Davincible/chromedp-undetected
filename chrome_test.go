@@ -9,11 +9,16 @@ import (
 )
 
 func TestChromedpundetected(t *testing.T) {
-	c, cancel := New(NewConfig(WithTimeout(20 * time.Second)))
+	c, cancel, err := New(NewConfig(
+		WithTimeout(20*time.Second),
+		WithHeadless(),
+	))
 	defer cancel()
+	assert.NoError(t, err)
 
-	err := c.Run(
-		chromedp.Navigate("https://nowsecure.nl"),
+	err = c.Run(
+		// chromedp.Navigate("https://nowsecure.nl"),
+		Navigate("https://nowsecure.nl"),
 		chromedp.WaitVisible(`//div[@class="hystericalbg"]`),
 	)
 	assert.NoError(t, err)

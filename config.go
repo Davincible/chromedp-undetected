@@ -60,3 +60,9 @@ func WithTimeout(timeout time.Duration) Option {
 		c.Timeout = timeout
 	}
 }
+
+func WithHeadless() Option {
+	return func(c *Config) {
+		c.Headless = true
+	}
+}
