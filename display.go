@@ -49,6 +49,9 @@ func NewFrameBuffer(screenSize string) (*FrameBuffer, error) { //nolint:funlen
 		return nil, ErrXvfbNotFound
 	}
 
+	output, err := exec.Command("Xvfb", "-help").Output()
+	slog.Info("Xvfb", slog.String("output", string(output)), slog.Bool("error", err != nil))
+
 	pipeReader, pipeWriter, err := os.Pipe()
 	if err != nil {
 		return nil, err

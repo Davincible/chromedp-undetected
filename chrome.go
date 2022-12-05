@@ -40,7 +40,7 @@ func New(config Config) (context.Context, context.CancelFunc, error) {
 
 	headlessOpts, closeFrameBuffer, err := headlessFlag(config)
 	if err != nil {
-		return nil, nil, err
+		return nil, func() {}, err
 	}
 
 	opts = append(opts, headlessOpts...)
