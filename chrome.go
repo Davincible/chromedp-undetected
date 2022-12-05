@@ -123,7 +123,7 @@ func headlessFlag(config Config) ([]chromedp.ExecAllocatorOption, func() error, 
 	var opts []chromedp.ExecAllocatorOption
 
 	// Create virtual display
-	frameBuffer, err := NewFrameBuffer("1920x1080x24")
+	frameBuffer, err := newFrameBuffer("1920x1080x24")
 	if err != nil {
 		return nil, nil, err
 	}

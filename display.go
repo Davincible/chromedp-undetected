@@ -20,9 +20,9 @@ var (
 	ErrXvfbNotFound = errors.New("xvfb not found. Please install (Linux only)")
 )
 
-// FrameBuffer controls an X virtual frame buffer running as a background
+// frameBuffer controls an X virtual frame buffer running as a background
 // process.
-type FrameBuffer struct {
+type frameBuffer struct {
 	// Display is the X11 display number that the Xvfb process is hosting
 	// (without the preceding colon).
 	Display string
@@ -35,16 +35,16 @@ type FrameBuffer struct {
 	cmd *exec.Cmd
 }
 
-// FrameBufferOptions describes the options that can be used to create a frame buffer.
-type FrameBufferOptions struct {
+// frameBufferOptions describes the options that can be used to create a frame buffer.
+type frameBufferOptions struct {
 	// ScreenSize is the option for the frame buffer screen size.
 	// This is of the form "{width}x{height}[x{depth}]".  For example: "1024x768x24"
 	ScreenSize string
 }
 
-// NewFrameBuffer starts an X virtual frame buffer running in the background.
+// newFrameBuffer starts an X virtual frame buffer running in the background.
 // FrameBufferOptions may be populated to change the behavior of the frame buffer.
-func NewFrameBuffer(screenSize string) (*FrameBuffer, error) { //nolint:funlen
+func newFrameBuffer(screenSize string) (*frameBuffer, error) { //nolint:funlen
 	if err := exec.Command("which", "Xvfb").Run(); err != nil {
 		return nil, ErrXvfbNotFound
 	}
@@ -135,12 +135,12 @@ func NewFrameBuffer(screenSize string) (*FrameBuffer, error) { //nolint:funlen
 		return nil, err
 	}
 
-	return &FrameBuffer{display, authPath, xvfb}, nil
+	return &frameBuffer{display, authPath, xvfb}, nil
 }
 
 // Stop kills the background frame buffer process and removes the X
 // authorization file.
-func (f FrameBuffer) Stop() error {
+func (f frameBuffer) Stop() error {
 	if err := f.cmd.Process.Kill(); err != nil {
 		return err
 	}

@@ -24,6 +24,8 @@ type Config struct {
 	ContextOptions []chromedp.ContextOption `json:"-" yaml:"-"`
 
 	// UserDataDir is the path to the directory where Chrome user data is stored.
+	//
+	// By default a temporary directory will be used.
 	UserDataDir string `json:"userDataDir" yaml:"userDataDir"`
 
 	// LogLevel is the Chrome log level, 0 by default.
@@ -33,6 +35,8 @@ type Config struct {
 	NoSandbox bool `json:"noSandbox" yaml:"noSandbox"`
 
 	// ChromePath is a specific binary path for Chrome.
+	//
+	// By default the chrome or chromium on your PATH will be used.
 	ChromePath string `json:"chromePath" yaml:"chromePath"`
 
 	// Port is the Chrome debugger port. By default a random port will be used.
@@ -43,7 +47,7 @@ type Config struct {
 
 	// Headless dicates whether Chrome will start headless (without a visible window)
 	//
-	// It will NOT use the 'headless' option, rather it will use a virtual display.
+	// It will NOT use the '--headless' option, rather it will use a virtual display.
 	// Requires Xvfb to be installed, only available on Linux.
 	Headless bool `json:"headless" yaml:"headless"`
 }
