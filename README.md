@@ -1,4 +1,4 @@
-# Undetected Chromedp
+# Undetected Chromedp ![GitHub](https://img.shields.io/github/license/Davincible/chromedp-undetected) [![Go.Dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/github.com/Davincible/chromedp-undetected?tab=doc) [![Go Report Card](https://goreportcard.com/badge/github.com/Davincible/chromedp-undetected)](https://goreportcard.com/report/github.com/Davincible/chromedp-undetected)
 
 A small library that provides a chromedp context with a browser configured to mimick
 a regular browser to prevent triggering anti-bot measures. This is not a fool proof
@@ -15,12 +15,13 @@ package main
 import (
 	"time"
 
-	cu "github.com/Davincible/chromedp-undetected"
 	"github.com/chromedp/chromedp"
+
+	cu "github.com/Davincible/chromedp-undetected"
 )
 
 func main() {
-	// New creates a new context for use with Chromedp. With this context
+	// New creates a new context for use with chromedp. With this context
 	// you can use chromedp as you normally would.
 	ctx, cancel, err := cu.New(cu.NewConfig(
 		// Remove this if you want to see a browser window.
