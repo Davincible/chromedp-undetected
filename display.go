@@ -45,13 +45,9 @@ type FrameBufferOptions struct {
 // NewFrameBuffer starts an X virtual frame buffer running in the background.
 // FrameBufferOptions may be populated to change the behavior of the frame buffer.
 func NewFrameBuffer(screenSize string) (*FrameBuffer, error) { //nolint:funlen
-	if err := exec.Command("Xvfb", "-help").Run(); err != nil {
+	if err := exec.Command("which", "Xvfb").Run(); err != nil {
 		return nil, ErrXvfbNotFound
 	}
-
-	cmd := exec.Command("which", "Xvfb")
-	output, err := cmd.Output()
-	slog.Info("Xvfb", slog.String("output", string(output)), slog.Bool("error", err != nil), slog.Int("exit code", cmd.ProcessState.ExitCode()))
 
 	pipeReader, pipeWriter, err := os.Pipe()
 	if err != nil {
@@ -125,7 +121,7 @@ func NewFrameBuffer(screenSize string) (*FrameBuffer, error) { //nolint:funlen
 			return nil, errors.New("xvfb did not print the display number")
 		}
 
-	case <-time.After(3 * time.Second):
+	case <-time.After(10 * time.Second):
 		return nil, errors.New("timeout waiting for Xvfb")
 	}
 
