@@ -49,7 +49,7 @@ func NewFrameBuffer(screenSize string) (*FrameBuffer, error) { //nolint:funlen
 		return nil, ErrXvfbNotFound
 	}
 
-	cmd := exec.Command("Xvfb", "-help")
+	cmd := exec.Command("which", "Xvfb")
 	output, err := cmd.Output()
 	slog.Info("Xvfb", slog.String("output", string(output)), slog.Bool("error", err != nil), slog.Int("exit code", cmd.ProcessState.ExitCode()))
 
