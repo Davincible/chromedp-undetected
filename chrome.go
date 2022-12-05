@@ -1,3 +1,5 @@
+// Package chromedpundetected provides a chromedp context with an undetected
+// Chrome browser.
 package chromedpundetected
 
 import (
@@ -5,6 +7,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"path"
 	"strconv"
 	"strings"
 	"syscall"
@@ -12,69 +15,130 @@ import (
 	"github.com/Xuanwo/go-locale"
 	"github.com/chromedp/chromedp"
 	"github.com/google/uuid"
+	"golang.org/x/exp/slog"
 )
 
-type Chrome struct {
-	ctx         context.Context
-	config      Config
-	cancel      func()
-	actions     []chromedp.Action
-	frameBuffer *FrameBuffer
+// Defaults.
+var (
+	DefaultUserDirPrefix = "chromedp-undetected-"
+)
+
+// New creates a context with an undetected Chrome executor.
+func New(config Config) (context.Context, context.CancelFunc, error) {
+	var opts []chromedp.ExecAllocatorOption
+
+	opts = append(opts, localeFlag())
+	opts = append(opts, supressWelcomeFlag()...)
+	opts = append(opts, logLevelFlag(config))
+	opts = append(opts, debuggerAddrFlag(config)...)
+	opts = append(opts, noSandboxFlag(config)...)
+
+	userDataDir := path.Join(os.TempDir(), DefaultUserDirPrefix+uuid.NewString())
+	if len(config.ChromePath) > 0 {
+		opts = append(opts, chromedp.UserDataDir(userDataDir))
+	}
+
+	headlessOpts, closeFrameBuffer, err := headlessFlag(config)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	opts = append(opts, headlessOpts...)
+
+	ctx := context.Background()
+	if config.Ctx != nil {
+		ctx = config.Ctx
+	}
+
+	cancelT := func() {}
+	if config.Timeout > 0 {
+		ctx, cancelT = context.WithTimeout(ctx, config.Timeout)
+	}
+
+	ctx, cancelA := chromedp.NewExecAllocator(ctx, opts...)
+	ctx, cancelC := chromedp.NewContext(ctx, config.ContextOptions...)
+
+	cancel := func() {
+		cancelT()
+		cancelA()
+		cancelC()
+
+		if err := closeFrameBuffer(); err != nil {
+			slog.Error("failed to close Xvfb", err)
+		}
+
+		if len(config.ChromePath) == 0 {
+			_ = os.RemoveAll(userDataDir) //nolint:errcheck
+		}
+	}
+
+	return ctx, cancel, nil
 }
 
-func New(config Config) (Chrome, context.CancelFunc, error) {
-	c := Chrome{config: config}
+func supressWelcomeFlag() []chromedp.ExecAllocatorOption {
+	return []chromedp.ExecAllocatorOption{
+		chromedp.Flag("no-first-run", true),
+		chromedp.Flag("no-default-browser-check", true),
+	}
+}
 
-	port := strconv.Itoa(c.config.Port)
-	if c.config.Port == 0 {
+func debuggerAddrFlag(config Config) []chromedp.ExecAllocatorOption {
+	port := strconv.Itoa(config.Port)
+	if config.Port == 0 {
 		port = getRandomPort()
 	}
 
-	opts := []chromedp.ExecAllocatorOption{
-		chromedp.Flag("no-first-run", true),
-		chromedp.Flag("user-data-dir", c.config.UserDataDir),
-		chromedp.Flag("log-level", strconv.Itoa(c.config.LogLevel)),
+	return []chromedp.ExecAllocatorOption{
 		chromedp.Flag("remote-debugging-host", "127.0.0.1"),
 		chromedp.Flag("remote-debugging-port", port),
 	}
+}
 
-	// Locale
+func localeFlag() chromedp.ExecAllocatorOption {
 	lang := "en-US"
 	if tag, err := locale.Detect(); err != nil && len(tag.String()) > 0 {
 		lang = tag.String()
 	}
 
-	opts = append(opts, chromedp.Flag("lang", lang))
+	return chromedp.Flag("lang", lang)
+}
 
-	// Sandbox
-	if c.config.NoSandbox {
+func noSandboxFlag(config Config) []chromedp.ExecAllocatorOption {
+	var opts []chromedp.ExecAllocatorOption
+
+	if config.NoSandbox {
 		opts = append(opts,
-			chromedp.Flag("no-sandbox", true), chromedp.Flag("test-type", true))
+			chromedp.Flag("no-sandbox", true),
+			chromedp.Flag("test-type", true))
 	}
 
-	// Userdata profile path
-	if len(c.config.ChromePath) > 0 {
-		opts = append(opts, chromedp.UserDataDir("/tmp/chromedp-data-"+uuid.NewString()))
+	return opts
+}
+
+func logLevelFlag(config Config) chromedp.ExecAllocatorOption {
+	return chromedp.Flag("log-level", strconv.Itoa(config.LogLevel))
+}
+
+func headlessFlag(config Config) ([]chromedp.ExecAllocatorOption, func() error, error) {
+	var opts []chromedp.ExecAllocatorOption
+
+	// Create virtual display
+	frameBuffer, err := NewFrameBuffer("1920x1080x24")
+	if err != nil {
+		return nil, nil, err
 	}
 
-	// Headless
-	if c.config.Headless {
-		// Create virtual display
-		fb, err := NewFrameBuffer("1920x1080x24")
-		if err != nil {
-			return c, nil, err
-		}
-
+	if config.Headless {
 		opts = append(opts,
 			// chromedp.Flag("headless", true),
 			chromedp.Flag("window-size", "1920,1080"),
 			chromedp.Flag("start-maximized", true),
 			chromedp.Flag("no-sandbox", true),
 			chromedp.ModifyCmdFunc(func(cmd *exec.Cmd) {
-				cmd.Env = append(cmd.Env, "DISPLAY=:"+fb.Display)
-				cmd.Env = append(cmd.Env, "XAUTHORITY="+fb.AuthPath)
+				cmd.Env = append(cmd.Env, "DISPLAY=:"+frameBuffer.Display)
+				cmd.Env = append(cmd.Env, "XAUTHORITY="+frameBuffer.AuthPath)
 
-				// Default modify command
+				// Default modify command per chromedp
 				if _, ok := os.LookupEnv("LAMBDA_TASK_ROOT"); ok {
 					// do nothing on AWS Lambda
 					return
@@ -90,35 +154,14 @@ func New(config Config) (Chrome, context.CancelFunc, error) {
 		)
 	}
 
-	ctx := context.Background()
-
-	cancelT := func() {}
-	if c.config.Timeout > 0 {
-		ctx, cancelT = context.WithTimeout(ctx, c.config.Timeout)
-	}
-
-	ctx, cancelA := chromedp.NewExecAllocator(ctx, opts...)
-	ctx, cancelC := chromedp.NewContext(ctx, c.config.ContextOptions...)
-	cancel := func() {
-		cancelT()
-		cancelA()
-		cancelC()
-	}
-
-	c.ctx = ctx
-
-	return c, cancel, nil
-}
-
-func (c *Chrome) Run(actions ...chromedp.Action) error {
-	return chromedp.Run(c.ctx, append(c.actions, actions...)...)
+	return opts, frameBuffer.Stop, nil
 }
 
 func getRandomPort() string {
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err == nil {
 		addr := l.Addr().String()
-		l.Close()
+		l.Close() //nolint:errcheck,gosec
 
 		return strings.Split(addr, ":")[1]
 	}

@@ -4,13 +4,20 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
+
+	"golang.org/x/exp/slog"
+)
+
+// Errors.
+var (
+	ErrXvfbNotFound = errors.New("xvfb not found. Please install (Linux only)")
 )
 
 // FrameBuffer controls an X virtual frame buffer running as a background
@@ -35,22 +42,26 @@ type FrameBufferOptions struct {
 	ScreenSize string
 }
 
-// NewFrameBufferWithOptions starts an X virtual frame buffer running in the background.
+// NewFrameBuffer starts an X virtual frame buffer running in the background.
 // FrameBufferOptions may be populated to change the behavior of the frame buffer.
-func NewFrameBuffer(screenSize string) (*FrameBuffer, error) {
-	r, w, err := os.Pipe()
-	if err != nil {
-		return nil, err
+func NewFrameBuffer(screenSize string) (*FrameBuffer, error) { //nolint:funlen
+	if err := exec.Command("Xvfb", "-help").Run(); err != nil {
+		return nil, ErrXvfbNotFound
 	}
-	defer r.Close()
 
-	auth, err := ioutil.TempFile("", "selenium-xvfb")
+	pipeReader, pipeWriter, err := os.Pipe()
 	if err != nil {
 		return nil, err
 	}
 
-	authPath := auth.Name()
-	if err := auth.Close(); err != nil {
+	defer func() {
+		if err = pipeReader.Close(); err != nil {
+			slog.Error("failed to close pipe reader", err)
+		}
+	}()
+
+	authPath, err := tempFile("chromedp-xvfb")
+	if err != nil {
 		return nil, err
 	}
 
@@ -68,16 +79,22 @@ func NewFrameBuffer(screenSize string) (*FrameBuffer, error) {
 	}
 
 	xvfb := exec.Command("Xvfb", arguments...)
-	xvfb.ExtraFiles = []*os.File{w}
-
-	// TODO(minusnine): plumb a way to set xvfb.Std{err,out} conditionally.
-	// TODO(minusnine): Pdeathsig is only supported on Linux. Somehow, make sure
-	// process cleanup happens as gracefully as possible.
+	xvfb.ExtraFiles = []*os.File{pipeWriter}
 	xvfb.Env = append(xvfb.Env, "XAUTHORITY="+authPath)
+
+	if xvfb.SysProcAttr == nil {
+		xvfb.SysProcAttr = new(syscall.SysProcAttr)
+	}
+
+	xvfb.SysProcAttr.Pdeathsig = syscall.SIGKILL
+
 	if err := xvfb.Start(); err != nil {
 		return nil, err
 	}
-	w.Close()
+
+	if err := pipeWriter.Close(); err != nil {
+		return nil, err
+	}
 
 	type resp struct {
 		display string
@@ -87,7 +104,7 @@ func NewFrameBuffer(screenSize string) (*FrameBuffer, error) {
 	ch := make(chan resp)
 
 	go func() {
-		bufr := bufio.NewReader(r)
+		bufr := bufio.NewReader(pipeReader)
 		s, err := bufr.ReadString('\n')
 		ch <- resp{s, err}
 	}()
@@ -108,10 +125,11 @@ func NewFrameBuffer(screenSize string) (*FrameBuffer, error) {
 		return nil, errors.New("timeout waiting for Xvfb")
 	}
 
-	xauth := exec.Command("xauth", "generate", ":"+display, ".", "trusted")
+	xauth := exec.Command("xauth", "generate", ":"+display, ".", "trusted") //nolint:gosec
+	xauth.Env = append(xauth.Env, "XAUTHORITY="+authPath)
+	// Make make this conditional?
 	xauth.Stderr = os.Stderr
 	xauth.Stdout = os.Stdout
-	xauth.Env = append(xauth.Env, "XAUTHORITY="+authPath)
 
 	if err := xauth.Run(); err != nil {
 		return nil, err
@@ -127,11 +145,26 @@ func (f FrameBuffer) Stop() error {
 		return err
 	}
 
-	os.Remove(f.AuthPath) // best effort removal; ignore error
+	_ = os.Remove(f.AuthPath) //nolint:errcheck
 
 	if err := f.cmd.Wait(); err != nil && err.Error() != "signal: killed" {
 		return err
 	}
 
 	return nil
+}
+
+func tempFile(pattern string) (string, error) {
+	tempFile, err := os.CreateTemp("", pattern)
+	if err != nil {
+		return "", err
+	}
+
+	fileName := tempFile.Name()
+
+	if err := tempFile.Close(); err != nil {
+		return "", err
+	}
+
+	return fileName, nil
 }
