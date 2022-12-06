@@ -130,7 +130,7 @@ func WithLogLevel(level int) Option {
 }
 
 // WithChromeFlags add chrome flags.
-func WithChromeFlags(opts []chromedp.ExecAllocatorOption) Option {
+func WithChromeFlags(opts ...chromedp.ExecAllocatorOption) Option {
 	return func(c *Config) {
 		c.ChromeFlags = append(c.ChromeFlags, opts...)
 	}
