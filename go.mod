@@ -6,6 +6,7 @@ require (
 	github.com/Xuanwo/go-locale v1.1.0
 	github.com/chromedp/chromedp v0.8.6
 	github.com/google/uuid v1.3.0
+	github.com/hashicorp/go-multierror v1.1.1
 	github.com/stretchr/testify v1.7.0
 	golang.org/x/exp v0.0.0-20221205204356-47842c84f3db
 )
@@ -17,6 +18,7 @@ require (
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/gobwas/ws v1.1.0 // indirect
+	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
