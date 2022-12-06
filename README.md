@@ -1,4 +1,4 @@
-# Undetected Chromedp 
+# Undetected chromedp 
 
 [![Go.Dev reference](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat)](https://pkg.go.dev/github.com/Davincible/chromedp-undetected?tab=doc) [![Go Report Card](https://goreportcard.com/badge/github.com/Davincible/chromedp-undetected)](https://goreportcard.com/report/github.com/Davincible/chromedp-undetected) [![Unit Tests](https://github.com/Davincible/chromedp-undetected/actions/workflows/main.yaml/badge.svg)](https://github.com/Davincible/chromedp-undetected/actions/workflows/main.yaml) [![GitHub](https://img.shields.io/github/license/Davincible/chromedp-undetected)](https://github.com/Davincible/chromedp-undetected/blob/master/LICENSE)
 
