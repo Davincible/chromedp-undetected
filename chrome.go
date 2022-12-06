@@ -32,6 +32,7 @@ func New(config Config) (context.Context, context.CancelFunc, error) {
 	opts = append(opts, logLevelFlag(config))
 	opts = append(opts, debuggerAddrFlag(config)...)
 	opts = append(opts, noSandboxFlag(config)...)
+	opts = append(opts, config.ChromeFlags...)
 
 	userDataDir := path.Join(os.TempDir(), DefaultUserDirPrefix+uuid.NewString())
 	if len(config.ChromePath) > 0 {

@@ -23,6 +23,14 @@ type Config struct {
 	// ContextOptions are chromedp context option.
 	ContextOptions []chromedp.ContextOption `json:"-" yaml:"-"`
 
+	// ChromeFlags are additional Chrome flags to pass to the browser.
+	//
+	// NOTE: adding additional flags can make the detection unstable, so test,
+	// and be careful of what flags you add. Mostly intended to configure things
+	// like a proxy. Also check if the flags you want to set are not already set
+	// by this library.
+	ChromeFlags []chromedp.ExecAllocatorOption
+
 	// UserDataDir is the path to the directory where Chrome user data is stored.
 	//
 	// By default a temporary directory will be used.
