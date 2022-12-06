@@ -8,7 +8,7 @@ triggering anti-bot measures. This is not a fool proof method, and how you use
 it will still dictate whether you will run into anti-bot detection, but at 
 least it won't trigger on all the basic detection tests.
 
-The headless option only works on linux, and required `Xvfb` to be installed.
+The headless option only works on linux, and requires `Xvfb` to be installed.
 Could theoretically work on Mac OS with [xquartz](https://www.xquartz.org/)
 but I don't have a Mac to test with, so feel free to PR.
 
