@@ -1,6 +1,7 @@
 package chromedpundetected
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -13,12 +14,12 @@ func TestChromedpundetected(t *testing.T) {
 	var gerr error
 	var success bool
 
+	// Attempt to run the tests multiple times, as in CI they are unstable.
 	for i := 0; i < 3; i++ {
 		ctx, cancel, err := New(NewConfig(
 			WithTimeout(20*time.Second),
 			WithHeadless(),
 		))
-		defer cancel()
 		if err != nil {
 			gerr = multierror.Append(gerr, fmt.Errorf("create context: %w", err))
 			continue
@@ -30,10 +31,24 @@ func TestChromedpundetected(t *testing.T) {
 		)
 		if err != nil {
 			gerr = multierror.Append(gerr, fmt.Errorf("chromedp run: %w", err))
+
+			// Close Chrome instance.
+			ctxN, cancelN := context.WithTimeout(ctx, time.Second*10)
+			if err := chromedp.Cancel(ctxN); err != nil {
+				t.Logf("failed to cancel: %v", err)
+			}
+			cancelN()
+			cancel()
+
 			continue
 		}
 
 		success = true
+		if gerr != nil {
+			t.Logf("attempt %d, errors: %s", i, gerr.Error())
+		}
+
+		cancel()
 		break
 	}
 
