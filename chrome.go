@@ -27,16 +27,9 @@ var (
 func New(config Config) (context.Context, context.CancelFunc, error) {
 	var opts []chromedp.ExecAllocatorOption
 
-	opts = append(opts, localeFlag())
-	opts = append(opts, supressWelcomeFlag()...)
-	opts = append(opts, logLevelFlag(config))
-	opts = append(opts, debuggerAddrFlag(config)...)
-	opts = append(opts, noSandboxFlag(config)...)
-	opts = append(opts, config.ChromeFlags...)
-
 	userDataDir := path.Join(os.TempDir(), DefaultUserDirPrefix+uuid.NewString())
 	if len(config.ChromePath) > 0 {
-		opts = append(opts, chromedp.UserDataDir(userDataDir))
+		userDataDir = config.ChromePath
 	}
 
 	headlessOpts, closeFrameBuffer, err := headlessFlag(config)
@@ -44,7 +37,14 @@ func New(config Config) (context.Context, context.CancelFunc, error) {
 		return nil, func() {}, err
 	}
 
+	opts = append(opts, localeFlag())
+	opts = append(opts, supressWelcomeFlag()...)
+	opts = append(opts, logLevelFlag(config))
+	opts = append(opts, debuggerAddrFlag(config)...)
+	opts = append(opts, noSandboxFlag(config)...)
+	opts = append(opts, chromedp.UserDataDir(userDataDir))
 	opts = append(opts, headlessOpts...)
+	opts = append(opts, config.ChromeFlags...)
 
 	ctx := context.Background()
 	if config.Ctx != nil {
@@ -123,13 +123,17 @@ func logLevelFlag(config Config) chromedp.ExecAllocatorOption {
 func headlessFlag(config Config) ([]chromedp.ExecAllocatorOption, func() error, error) {
 	var opts []chromedp.ExecAllocatorOption
 
-	// Create virtual display
-	frameBuffer, err := newFrameBuffer("1920x1080x24")
-	if err != nil {
-		return nil, nil, err
-	}
+	cleanup := func() error { return nil }
 
 	if config.Headless {
+		// Create virtual display
+		frameBuffer, err := newFrameBuffer("1920x1080x24")
+		if err != nil {
+			return nil, nil, err
+		}
+
+		cleanup = frameBuffer.Stop
+
 		opts = append(opts,
 			// chromedp.Flag("headless", true),
 			chromedp.Flag("window-size", "1920,1080"),
@@ -155,7 +159,7 @@ func headlessFlag(config Config) ([]chromedp.ExecAllocatorOption, func() error, 
 		)
 	}
 
-	return opts, frameBuffer.Stop, nil
+	return opts, cleanup, nil
 }
 
 func getRandomPort() string {
