@@ -16,6 +16,7 @@ func TestChromedpundetected(t *testing.T) {
 
 	// Attempt to run the tests multiple times, as in CI they are unstable.
 	for i := 0; i < 3; i++ {
+		t.Logf("Attempt %d/3", i+1)
 		ctx, cancel, err := New(NewConfig(
 			WithTimeout(20*time.Second),
 			WithHeadless(),
@@ -44,6 +45,7 @@ func TestChromedpundetected(t *testing.T) {
 		}
 
 		success = true
+		t.Logf("Undetected!")
 		if gerr != nil {
 			t.Logf("attempt %d, errors: %s", i, gerr.Error())
 		}

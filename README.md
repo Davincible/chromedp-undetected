@@ -12,6 +12,11 @@ The headless option only works on linux, and requires `Xvfb` to be installed.
 Could theoretically work on Mac OS with [xquartz](https://www.xquartz.org/)
 but I don't have a Mac to test with, so feel free to PR.
 
+A Docker container example is provided in `Dockerfile`. The most important things
+to note is to not use the headless chrome image as base, but to normally install 
+chrome or chromium, and to install xvfb. Note that this image is neither secure
+nor optimized, and merely serves as an example.
+
 ```go
 package main
 
