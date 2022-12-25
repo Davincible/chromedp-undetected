@@ -12,7 +12,7 @@ import (
 
 func TestRunCommand(t *testing.T) {
 	testRun(t,
-		3,
+		n,
 		NewConfig(
 			WithTimeout(20*time.Second),
 			WithHeadless(),
@@ -32,7 +32,7 @@ func TestBlockURLs(t *testing.T) {
 	btn := `//button[@title="Akkoord"]`
 
 	testRun(t,
-		3,
+		n,
 		NewConfig(
 			WithTimeout(20*time.Second),
 			WithHeadless(),
@@ -63,7 +63,7 @@ func TestCookiesExtract(t *testing.T) {
 	btn := `//button[@title="Akkoord"]`
 
 	testRun(t,
-		3,
+		n,
 		NewConfig(
 			WithTimeout(20*time.Second),
 			WithHeadless(),

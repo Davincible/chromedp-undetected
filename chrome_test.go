@@ -10,9 +10,11 @@ import (
 	"github.com/hashicorp/go-multierror"
 )
 
+var n = 3
+
 func TestChromedpundetected(t *testing.T) {
 	testRun(t,
-		3,
+		n,
 		NewConfig(
 			WithTimeout(20*time.Second),
 			WithHeadless(),
