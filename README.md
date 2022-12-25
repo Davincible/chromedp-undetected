@@ -72,6 +72,14 @@ func LoadCookies(cookies []Cookie) chromedp.ActionFunc
 // and loads in the cookies into the browser.
 func LoadCookiesFromFile(path string) chromedp.ActionFunc
 
+// SaveCookies extracts the cookies from the current URL and appends them to
+// provided array.
+func SaveCookies(cookies *[]Cookie) chromedp.ActionFunc
+
+// SaveCookiesTo extracts the cookies from the current page and saves them
+// as JSON to the provided path.
+func SaveCookiesTo(path string) chromedp.ActionFunc
+
 // RunCommand runs any Chrome Dev Tools command, with any params.
 // 
 // In contrast to the native method of chromedp, with this method you can
