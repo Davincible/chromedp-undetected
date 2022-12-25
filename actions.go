@@ -83,6 +83,54 @@ func LoadCookies(cookies []Cookie) chromedp.ActionFunc {
 	})
 }
 
+// SaveCookies extracts the cookies from the current URL and appends them to
+// provided array.
+func SaveCookies(cookies *[]Cookie) chromedp.ActionFunc {
+	return chromedp.ActionFunc(func(ctx context.Context) error {
+		c, err := network.GetCookies().Do(ctx)
+		if err != nil {
+			return err
+		}
+
+		for _, cookie := range c {
+			*cookies = append(*cookies, Cookie{
+				Name:     cookie.Name,
+				Value:    cookie.Value,
+				Domain:   cookie.Domain,
+				Path:     cookie.Path,
+				Expires:  cookie.Expires,
+				HTTPOnly: cookie.HTTPOnly,
+				Secure:   cookie.HTTPOnly,
+			})
+		}
+
+		return nil
+	})
+}
+
+// SaveCookiesTo extracts the cookies from the current page and saves them
+// as JSON to the provided path.
+func SaveCookiesTo(path string) chromedp.ActionFunc {
+	return chromedp.ActionFunc(func(ctx context.Context) error {
+		var c []Cookie
+
+		if err := SaveCookies(&c).Do(ctx); err != nil {
+			return err
+		}
+
+		b, err := json.Marshal(c)
+		if err != nil {
+			return err
+		}
+
+		if err := os.WriteFile(path, b, 0644); err != nil { //nolint:gosec
+			return err
+		}
+
+		return nil
+	})
+}
+
 // RunCommandWithRes runs any Chrome Dev Tools command, with any params and
 // sets the result to the res parameter. Make sure it is a pointer.
 //
