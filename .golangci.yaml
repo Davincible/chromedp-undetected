@@ -191,6 +191,7 @@ linters:
     - gofumpt
     - nlreturn
     - gci
+    - thelper
 
     # Can be considered to be enabled
     - gochecknoinits
