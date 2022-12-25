@@ -57,3 +57,36 @@ func main() {
 
 > Based on [undetected-chromedriver](https://github.com/ultrafunkamsterdam/undetected-chromedriver)
 
+### Utilities
+
+Some utility functions are included I was missing in chromedp itself.
+
+```go
+// BlockURLs blocks a set of URLs in Chrome.
+func BlockURLs(url ...string) chromedp.ActionFunc 
+
+// LoadCookies will load a set of cookies into the browser.
+func LoadCookies(cookies []Cookie) chromedp.ActionFunc
+
+// LoadCookiesFromFile takes a file path to a json file containing cookies,
+// and loads in the cookies into the browser.
+func LoadCookiesFromFile(path string) chromedp.ActionFunc
+
+// RunCommand runs any Chrome Dev Tools command, with any params.
+// 
+// In contrast to the native method of chromedp, with this method you can
+// directly pass in a map with the data passed to the command.
+func RunCommand(method string, params any) chromedp.ActionFunc
+
+// RunCommandWithRes runs any Chrome Dev Tools command, with any params and
+// sets the result to the res parameter. Make sure it is a pointer.
+// 
+// In contrast to the native method of chromedp, with this method you can
+// directly pass in a map with the data passed to the command.
+func RunCommandWithRes(method string, params, res any) chromedp.ActionFunc
+
+// UserAgentOverride overwrites the Chrome user agent.
+// 
+// It's better to use this method than emulation.UserAgentOverride.
+func UserAgentOverride(userAgent string) chromedp.ActionFunc
+```
