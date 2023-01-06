@@ -17,7 +17,7 @@ type Option func(*Config)
 
 // Config is a undetected Chrome config.
 type Config struct {
-	// Ctx is the base context to use. By default a background context will be used.
+	// Ctx is the base context to use. By default, a background context will be used.
 	Ctx context.Context `json:"-" yaml:"-"`
 
 	// ContextOptions are chromedp context option.
