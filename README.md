@@ -97,4 +97,8 @@ func RunCommandWithRes(method string, params, res any) chromedp.ActionFunc
 // 
 // It's better to use this method than emulation.UserAgentOverride.
 func UserAgentOverride(userAgent string) chromedp.ActionFunc
+
+// SendKeys does the same as chromedp.SendKeys excepts it randomly waits 100-500ms
+// between sending key presses.
+func SendKeys(sel any, v string, opts ...chromedp.QueryOption) chromedp.ActionFunc
 ```

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"time"
 
@@ -118,7 +119,7 @@ func SaveCookiesTo(path string) chromedp.ActionFunc {
 			return err
 		}
 
-		b, err := json.Marshal(c)
+		b, err := json.MarshalIndent(c, "", "  ")
 		if err != nil {
 			return err
 		}
@@ -160,4 +161,22 @@ func RunCommand(method string, params any) chromedp.ActionFunc {
 // BlockURLs blocks a set of URLs in Chrome.
 func BlockURLs(url ...string) chromedp.ActionFunc {
 	return RunCommand("Network.setBlockedURLs", map[string][]string{"urls": url})
+}
+
+// SendKeys does the same as chromedp.SendKeys excepts it randomly waits 100-500ms
+// between sending key presses.
+func SendKeys(sel any, v string, opts ...chromedp.QueryOption) chromedp.ActionFunc {
+	return chromedp.ActionFunc(func(ctx context.Context) error {
+		rand.Seed(time.Now().Unix())
+
+		for _, key := range v {
+			if err := chromedp.SendKeys(sel, string(key), opts...).Do(ctx); err != nil {
+				return err
+			}
+			s := rand.Int63n(100) + 100 //nolint:gosec
+			time.Sleep(time.Duration(s) * time.Millisecond)
+		}
+
+		return nil
+	})
 }
