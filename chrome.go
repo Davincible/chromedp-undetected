@@ -6,11 +6,9 @@ import (
 	"context"
 	"net"
 	"os"
-	"os/exec"
 	"path"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/Xuanwo/go-locale"
 	"github.com/chromedp/chromedp"
@@ -126,37 +124,19 @@ func headlessFlag(config Config) ([]chromedp.ExecAllocatorOption, func() error, 
 	cleanup := func() error { return nil }
 
 	if config.Headless {
-		// Create virtual display
-		frameBuffer, err := newFrameBuffer("1920x1080x24")
+		var optx []chromedp.ExecAllocatorOption
+		var err error
+		optx, cleanup, err = headlessOpts()
 		if err != nil {
-			return nil, nil, err
+			return nil, cleanup, err
 		}
-
-		cleanup = frameBuffer.Stop
-
 		opts = append(opts,
 			// chromedp.Flag("headless", true),
 			chromedp.Flag("window-size", "1920,1080"),
 			chromedp.Flag("start-maximized", true),
 			chromedp.Flag("no-sandbox", true),
-			chromedp.ModifyCmdFunc(func(cmd *exec.Cmd) {
-				cmd.Env = append(cmd.Env, "DISPLAY=:"+frameBuffer.Display)
-				cmd.Env = append(cmd.Env, "XAUTHORITY="+frameBuffer.AuthPath)
-
-				// Default modify command per chromedp
-				if _, ok := os.LookupEnv("LAMBDA_TASK_ROOT"); ok {
-					// do nothing on AWS Lambda
-					return
-				}
-
-				if cmd.SysProcAttr == nil {
-					cmd.SysProcAttr = new(syscall.SysProcAttr)
-				}
-
-				// When the parent process dies (Go), kill the child as well.
-				cmd.SysProcAttr.Pdeathsig = syscall.SIGKILL
-			}),
 		)
+		opts = append(opts, optx...)
 	}
 
 	return opts, cleanup, nil
