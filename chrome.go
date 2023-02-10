@@ -4,10 +4,12 @@ package chromedpundetected
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"os"
 	"os/exec"
 	"path"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -127,17 +129,19 @@ func headlessFlag(config Config) ([]chromedp.ExecAllocatorOption, func() error, 
 
 	if config.Headless {
 		// Create virtual display
-		frameBuffer, err := newFrameBuffer("1920x1080x24")
+		// frameBuffer, err := newFrameBuffer("1920x1080x24")
+		frameBuffer, err := newFrameBuffer("1280x1024x16")
 		if err != nil {
 			return nil, nil, err
 		}
 
 		cleanup = frameBuffer.Stop
 
+		fmt.Println("Yes, debuggin...")
 		opts = append(opts,
 			// chromedp.Flag("headless", true),
-			chromedp.Flag("window-size", "1920,1080"),
-			chromedp.Flag("start-maximized", true),
+			// chromedp.Flag("window-size", "1920,1080"),
+			// chromedp.Flag("start-maximized", true),
 			chromedp.Flag("no-sandbox", true),
 			chromedp.ModifyCmdFunc(func(cmd *exec.Cmd) {
 				cmd.Env = append(cmd.Env, "DISPLAY=:"+frameBuffer.Display)
@@ -154,7 +158,9 @@ func headlessFlag(config Config) ([]chromedp.ExecAllocatorOption, func() error, 
 				}
 
 				// When the parent process dies (Go), kill the child as well.
-				cmd.SysProcAttr.Pdeathsig = syscall.SIGKILL
+				if runtime.GOOS == "linux" {
+					cmd.SysProcAttr.Pdeathsig = syscall.SIGKILL
+				}
 			}),
 		)
 	}
