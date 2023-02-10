@@ -7,10 +7,8 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
-	"strconv"
-	"strings"
+	"runtime"
 	"syscall"
-	"time"
 
 	"golang.org/x/exp/slog"
 )
@@ -60,7 +58,8 @@ func newFrameBuffer(screenSize string) (*frameBuffer, error) { //nolint:funlen
 
 	// Xvfb will print the display on which it is listening to file descriptor 3,
 	// for which we provide a pipe.
-	arguments := []string{"-displayfd", "3", "-nolisten", "tcp"}
+	// arguments := []string{"-displayfd", "3", "-nolisten", "tcp"}
+	arguments := []string{":3"}
 
 	if screenSize != "" {
 		screenSizeExpression := regexp.MustCompile(`^\d+x\d+(?:x\d+)$`)
@@ -68,7 +67,8 @@ func newFrameBuffer(screenSize string) (*frameBuffer, error) { //nolint:funlen
 			return nil, fmt.Errorf("invalid screen size: expected 'WxH[xD]', got %q", screenSize)
 		}
 
-		arguments = append(arguments, "-screen", "0", screenSize)
+		// arguments = append(arguments, "-screen", "0", screenSize)
+		arguments = append(arguments, "-screen", ":3", screenSize)
 	}
 
 	xvfb := exec.Command("Xvfb", arguments...)
@@ -79,7 +79,9 @@ func newFrameBuffer(screenSize string) (*frameBuffer, error) { //nolint:funlen
 		xvfb.SysProcAttr = new(syscall.SysProcAttr)
 	}
 
-	xvfb.SysProcAttr.Pdeathsig = syscall.SIGKILL
+	if runtime.GOOS == "linux" {
+		xvfb.SysProcAttr.Pdeathsig = syscall.SIGKILL
+	}
 
 	if err := xvfb.Start(); err != nil {
 		return nil, err
@@ -102,22 +104,23 @@ func newFrameBuffer(screenSize string) (*frameBuffer, error) { //nolint:funlen
 		ch <- resp{s, err}
 	}()
 
-	var display string
-	select {
-	case resp := <-ch:
-		if resp.err != nil {
-			return nil, resp.err
-		}
+	// var display string
+	// select {
+	// case resp := <-ch:
+	// 	if resp.err != nil {
+	// 		return nil, resp.err
+	// 	}
+	//
+	// 	display = strings.TrimSpace(resp.display)
+	// 	if _, err := strconv.Atoi(display); err != nil {
+	// 		return nil, errors.New("xvfb did not print the display number")
+	// 	}
+	//
+	// case <-time.After(10 * time.Second):
+	// 	return nil, errors.New("timeout waiting for Xvfb")
+	// }
 
-		display = strings.TrimSpace(resp.display)
-		if _, err := strconv.Atoi(display); err != nil {
-			return nil, errors.New("xvfb did not print the display number")
-		}
-
-	case <-time.After(10 * time.Second):
-		return nil, errors.New("timeout waiting for Xvfb")
-	}
-
+	display := "3"
 	xauth := exec.Command("xauth", "generate", ":"+display, ".", "trusted") //nolint:gosec
 	xauth.Env = append(xauth.Env, "XAUTHORITY="+authPath)
 	// Make make this conditional?
