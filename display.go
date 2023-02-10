@@ -67,8 +67,8 @@ func newFrameBuffer(screenSize string) (*frameBuffer, error) { //nolint:funlen
 			return nil, fmt.Errorf("invalid screen size: expected 'WxH[xD]', got %q", screenSize)
 		}
 
-		arguments = append(arguments, "-screen", ":3", screenSize)
 		// arguments = append(arguments, "-screen", "0", screenSize)
+		arguments = append(arguments, "-screen", ":3", screenSize)
 	}
 
 	xvfb := exec.Command("Xvfb", arguments...)
@@ -104,7 +104,7 @@ func newFrameBuffer(screenSize string) (*frameBuffer, error) { //nolint:funlen
 		ch <- resp{s, err}
 	}()
 
-	var display string
+	// var display string
 	// select {
 	// case resp := <-ch:
 	// 	if resp.err != nil {
@@ -120,7 +120,7 @@ func newFrameBuffer(screenSize string) (*frameBuffer, error) { //nolint:funlen
 	// 	return nil, errors.New("timeout waiting for Xvfb")
 	// }
 
-	display = "3"
+	display := "3"
 	xauth := exec.Command("xauth", "generate", ":"+display, ".", "trusted") //nolint:gosec
 	xauth.Env = append(xauth.Env, "XAUTHORITY="+authPath)
 	// Make make this conditional?

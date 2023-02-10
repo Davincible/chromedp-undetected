@@ -4,7 +4,6 @@ package chromedpundetected
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"os"
 	"os/exec"
@@ -129,7 +128,6 @@ func headlessFlag(config Config) ([]chromedp.ExecAllocatorOption, func() error, 
 
 	if config.Headless {
 		// Create virtual display
-		// frameBuffer, err := newFrameBuffer("1920x1080x24")
 		frameBuffer, err := newFrameBuffer("1280x1024x16")
 		if err != nil {
 			return nil, nil, err
@@ -137,9 +135,7 @@ func headlessFlag(config Config) ([]chromedp.ExecAllocatorOption, func() error, 
 
 		cleanup = frameBuffer.Stop
 
-		fmt.Println("Yes, debuggin...")
 		opts = append(opts,
-			// chromedp.Flag("headless", true),
 			// chromedp.Flag("window-size", "1920,1080"),
 			// chromedp.Flag("start-maximized", true),
 			chromedp.Flag("no-sandbox", true),
