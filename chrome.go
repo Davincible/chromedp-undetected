@@ -24,12 +24,10 @@ var (
 // New creates a context with an undetected Chrome executor.
 func New(config Config) (context.Context, context.CancelFunc, error) {
 	var opts []chromedp.ExecAllocatorOption
-
-	userDataDir := path.Join(os.TempDir(), DefaultUserDirPrefix+uuid.NewString())
-	if len(config.ChromePath) > 0 {
-		userDataDir = config.ChromePath
+	isEmptyUserDataDir := (config.UserDataDir == "")
+	if isEmptyUserDataDir {
+		config.UserDataDir = path.Join(os.TempDir(), DefaultUserDirPrefix+uuid.NewString())
 	}
-
 	headlessOpts, closeFrameBuffer, err := headlessFlag(config)
 	if err != nil {
 		return nil, func() {}, err
@@ -40,7 +38,7 @@ func New(config Config) (context.Context, context.CancelFunc, error) {
 	opts = append(opts, logLevelFlag(config))
 	opts = append(opts, debuggerAddrFlag(config)...)
 	opts = append(opts, noSandboxFlag(config)...)
-	opts = append(opts, chromedp.UserDataDir(userDataDir))
+	opts = append(opts, chromedp.UserDataDir(config.UserDataDir))
 	opts = append(opts, headlessOpts...)
 	opts = append(opts, config.ChromeFlags...)
 
@@ -66,8 +64,8 @@ func New(config Config) (context.Context, context.CancelFunc, error) {
 			slog.Error("failed to close Xvfb", err)
 		}
 
-		if len(config.ChromePath) == 0 {
-			_ = os.RemoveAll(userDataDir) //nolint:errcheck
+		if isEmptyUserDataDir {
+			_ = os.RemoveAll(config.UserDataDir) //nolint:errcheck
 		}
 	}
 
