@@ -32,8 +32,11 @@ func New(config Config) (context.Context, context.CancelFunc, error) {
 	if err != nil {
 		return nil, func() {}, err
 	}
-
-	opts = append(opts, localeFlag())
+	if config.Language == "" {
+		opts = append(opts, localeFlag())
+	} else {
+		opts = append(opts, chromedp.Flag("lang", config.Language))
+	}
 	opts = append(opts, supressWelcomeFlag()...)
 	opts = append(opts, logLevelFlag(config))
 	opts = append(opts, debuggerAddrFlag(config)...)
