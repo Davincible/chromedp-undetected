@@ -58,6 +58,10 @@ type Config struct {
 	// It will NOT use the '--headless' option, rather it will use a virtual display.
 	// Requires Xvfb to be installed, only available on Linux.
 	Headless bool `json:"headless" yaml:"headless"`
+
+	// language to be used otherwise system/OS defaults are used
+	// https://developer.chrome.com/docs/webstore/i18n/#localeTable
+	Language string
 }
 
 // NewConfig creates a new config object with defaults.

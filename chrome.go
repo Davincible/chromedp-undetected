@@ -6,11 +6,9 @@ import (
 	"context"
 	"net"
 	"os"
-	"os/exec"
 	"path"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"github.com/Xuanwo/go-locale"
 	"github.com/chromedp/chromedp"
@@ -25,11 +23,14 @@ var (
 
 // New creates a context with an undetected Chrome executor.
 func New(config Config) (context.Context, context.CancelFunc, error) {
-	var opts []chromedp.ExecAllocatorOption
+	var (
+		opts    []chromedp.ExecAllocatorOption
+		tempDir bool
+	)
 
-	userDataDir := path.Join(os.TempDir(), DefaultUserDirPrefix+uuid.NewString())
-	if len(config.ChromePath) > 0 {
-		userDataDir = config.ChromePath
+	if config.UserDataDir == "" {
+		tempDir = true
+		config.UserDataDir = path.Join(os.TempDir(), DefaultUserDirPrefix+uuid.NewString())
 	}
 
 	headlessOpts, closeFrameBuffer, err := headlessFlag(config)
@@ -37,12 +38,17 @@ func New(config Config) (context.Context, context.CancelFunc, error) {
 		return nil, func() {}, err
 	}
 
-	opts = append(opts, localeFlag())
+	if config.Language == "" {
+		opts = append(opts, localeFlag())
+	} else {
+		opts = append(opts, chromedp.Flag("lang", config.Language))
+	}
+
 	opts = append(opts, supressWelcomeFlag()...)
 	opts = append(opts, logLevelFlag(config))
 	opts = append(opts, debuggerAddrFlag(config)...)
 	opts = append(opts, noSandboxFlag(config)...)
-	opts = append(opts, chromedp.UserDataDir(userDataDir))
+	opts = append(opts, chromedp.UserDataDir(config.UserDataDir))
 	opts = append(opts, headlessOpts...)
 	opts = append(opts, config.ChromeFlags...)
 
@@ -68,8 +74,8 @@ func New(config Config) (context.Context, context.CancelFunc, error) {
 			slog.Error("failed to close Xvfb", err)
 		}
 
-		if len(config.ChromePath) == 0 {
-			_ = os.RemoveAll(userDataDir) //nolint:errcheck
+		if tempDir {
+			_ = os.RemoveAll(config.UserDataDir) //nolint:errcheck
 		}
 	}
 
@@ -126,37 +132,23 @@ func headlessFlag(config Config) ([]chromedp.ExecAllocatorOption, func() error, 
 	cleanup := func() error { return nil }
 
 	if config.Headless {
-		// Create virtual display
-		frameBuffer, err := newFrameBuffer("1920x1080x24")
-		if err != nil {
-			return nil, nil, err
-		}
+		var (
+			optx []chromedp.ExecAllocatorOption
+			err  error
+		)
 
-		cleanup = frameBuffer.Stop
+		optx, cleanup, err = headlessOpts()
+		if err != nil {
+			return nil, cleanup, err
+		}
 
 		opts = append(opts,
 			// chromedp.Flag("headless", true),
 			chromedp.Flag("window-size", "1920,1080"),
 			chromedp.Flag("start-maximized", true),
 			chromedp.Flag("no-sandbox", true),
-			chromedp.ModifyCmdFunc(func(cmd *exec.Cmd) {
-				cmd.Env = append(cmd.Env, "DISPLAY=:"+frameBuffer.Display)
-				cmd.Env = append(cmd.Env, "XAUTHORITY="+frameBuffer.AuthPath)
-
-				// Default modify command per chromedp
-				if _, ok := os.LookupEnv("LAMBDA_TASK_ROOT"); ok {
-					// do nothing on AWS Lambda
-					return
-				}
-
-				if cmd.SysProcAttr == nil {
-					cmd.SysProcAttr = new(syscall.SysProcAttr)
-				}
-
-				// When the parent process dies (Go), kill the child as well.
-				cmd.SysProcAttr.Pdeathsig = syscall.SIGKILL
-			}),
 		)
+		opts = append(opts, optx...)
 	}
 
 	return opts, cleanup, nil
