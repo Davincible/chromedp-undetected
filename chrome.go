@@ -23,20 +23,27 @@ var (
 
 // New creates a context with an undetected Chrome executor.
 func New(config Config) (context.Context, context.CancelFunc, error) {
-	var opts []chromedp.ExecAllocatorOption
-	isEmptyUserDataDir := (config.UserDataDir == "")
-	if isEmptyUserDataDir {
+	var (
+		opts               []chromedp.ExecAllocatorOption
+		isEmptyUserDataDir bool
+	)
+
+	if config.UserDataDir == "" {
+		isEmptyUserDataDir = true
 		config.UserDataDir = path.Join(os.TempDir(), DefaultUserDirPrefix+uuid.NewString())
 	}
+
 	headlessOpts, closeFrameBuffer, err := headlessFlag(config)
 	if err != nil {
 		return nil, func() {}, err
 	}
+
 	if config.Language == "" {
 		opts = append(opts, localeFlag())
 	} else {
 		opts = append(opts, chromedp.Flag("lang", config.Language))
 	}
+
 	opts = append(opts, supressWelcomeFlag()...)
 	opts = append(opts, logLevelFlag(config))
 	opts = append(opts, debuggerAddrFlag(config)...)
