@@ -18,14 +18,13 @@ func headlessOpts() (opts []chromedp.ExecAllocatorOption, cleanup func() error, 
 	if err != nil {
 		return nil, nil, err
 	}
-	cleanup = frameBuffer.Stop
+
 	opt := chromedp.ModifyCmdFunc(func(cmd *exec.Cmd) {
 		cmd.Env = append(cmd.Env, "DISPLAY=:"+frameBuffer.Display)
 		cmd.Env = append(cmd.Env, "XAUTHORITY="+frameBuffer.AuthPath)
 
-		// Default modify command per chromedp
+		// Do nothing on AWS Lambda
 		if _, ok := os.LookupEnv("LAMBDA_TASK_ROOT"); ok {
-			// do nothing on AWS Lambda
 			return
 		}
 
@@ -33,8 +32,9 @@ func headlessOpts() (opts []chromedp.ExecAllocatorOption, cleanup func() error, 
 			cmd.SysProcAttr = new(syscall.SysProcAttr)
 		}
 
-		// When the parent process dies (Go), kill the child as well.
+		// When the parent process dies (Go), kill all the chid processes as well.
 		cmd.SysProcAttr.Pdeathsig = syscall.SIGKILL
 	})
-	return []chromedp.ExecAllocatorOption{opt}, cleanup, nil
+
+	return []chromedp.ExecAllocatorOption{opt}, frameBuffer.Stop, nil
 }

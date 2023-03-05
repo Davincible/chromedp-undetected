@@ -24,12 +24,12 @@ var (
 // New creates a context with an undetected Chrome executor.
 func New(config Config) (context.Context, context.CancelFunc, error) {
 	var (
-		opts               []chromedp.ExecAllocatorOption
-		isEmptyUserDataDir bool
+		opts    []chromedp.ExecAllocatorOption
+		tempDir bool
 	)
 
 	if config.UserDataDir == "" {
-		isEmptyUserDataDir = true
+		tempDir = true
 		config.UserDataDir = path.Join(os.TempDir(), DefaultUserDirPrefix+uuid.NewString())
 	}
 
@@ -74,7 +74,7 @@ func New(config Config) (context.Context, context.CancelFunc, error) {
 			slog.Error("failed to close Xvfb", err)
 		}
 
-		if isEmptyUserDataDir {
+		if tempDir {
 			_ = os.RemoveAll(config.UserDataDir) //nolint:errcheck
 		}
 	}
@@ -132,12 +132,16 @@ func headlessFlag(config Config) ([]chromedp.ExecAllocatorOption, func() error, 
 	cleanup := func() error { return nil }
 
 	if config.Headless {
-		var optx []chromedp.ExecAllocatorOption
-		var err error
+		var (
+			optx []chromedp.ExecAllocatorOption
+			err  error
+		)
+
 		optx, cleanup, err = headlessOpts()
 		if err != nil {
 			return nil, cleanup, err
 		}
+
 		opts = append(opts,
 			// chromedp.Flag("headless", true),
 			chromedp.Flag("window-size", "1920,1080"),
