@@ -11,9 +11,9 @@ import (
 	"strings"
 
 	"github.com/Xuanwo/go-locale"
+	"github.com/atomicvest/go-common/log"
 	"github.com/chromedp/chromedp"
 	"github.com/google/uuid"
-	"golang.org/x/exp/slog"
 )
 
 // Defaults.
@@ -71,7 +71,7 @@ func New(config Config) (context.Context, context.CancelFunc, error) {
 		cancelC()
 
 		if err := closeFrameBuffer(); err != nil {
-			slog.Error("failed to close Xvfb", err)
+			log.FromContext(ctx).Error("failed to close Xvfb", log.Err(err))
 		}
 
 		if tempDir {

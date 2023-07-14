@@ -13,8 +13,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-
-	"golang.org/x/exp/slog"
 )
 
 // Errors.
@@ -39,7 +37,7 @@ type frameBuffer struct {
 
 // newFrameBuffer starts an X virtual frame buffer running in the background.
 // FrameBufferOptions may be populated to change the behavior of the frame buffer.
-func newFrameBuffer(screenSize string) (*frameBuffer, error) { //nolint:funlen
+func newFrameBuffer(screenSize string) (fb *frameBuffer, err error) { //nolint:funlen
 	if err := exec.Command("which", "Xvfb").Run(); err != nil {
 		return nil, ErrXvfbNotFound
 	}
@@ -51,7 +49,7 @@ func newFrameBuffer(screenSize string) (*frameBuffer, error) { //nolint:funlen
 
 	defer func() {
 		if err = pipeReader.Close(); err != nil {
-			slog.Error("failed to close pipe reader", err)
+			err = fmt.Errorf("failed to close pipe reader: %w", err)
 		}
 	}()
 
