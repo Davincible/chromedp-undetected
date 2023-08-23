@@ -5,12 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"math/rand"
 	"os"
 	"time"
 
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/emulation"
+	"github.com/chromedp/cdproto/input"
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
 
@@ -167,8 +169,6 @@ func BlockURLs(url ...string) chromedp.ActionFunc {
 // between sending key presses.
 func SendKeys(sel any, v string, opts ...chromedp.QueryOption) chromedp.ActionFunc {
 	return chromedp.ActionFunc(func(ctx context.Context) error {
-		rand.Seed(time.Now().Unix())
-
 		for _, key := range v {
 			if err := chromedp.SendKeys(sel, string(key), opts...).Do(ctx); err != nil {
 				return err
@@ -179,4 +179,212 @@ func SendKeys(sel any, v string, opts ...chromedp.QueryOption) chromedp.ActionFu
 
 		return nil
 	})
+}
+
+var (
+	removeMouseVisualsJS = `window.removeEventListener('mousemove', drawDotAtCoords);`
+
+	// addMouseVisualsJS adds a mouse event listener to the page that draws a
+	// red dot at the current mouse position to visualize the mouse path.
+	addMouseVisualsJS = `
+  function drawDotAtCoords(event) {
+      var x = event.clientX;
+      var y = event.clientY;
+  
+      // Create a dot
+      var dot = document.createElement("div");
+      var dotSize = 8;  // Set to 2px to make a small dot
+      dot.style.width = dotSize + "px";
+      dot.style.height = dotSize + "px";
+      dot.style.backgroundColor = "red";
+      dot.style.position = "absolute";
+      dot.style.top = (y - dotSize/2) + "px";  // Adjusting by half the size to center it
+      dot.style.left = (x - dotSize/2) + "px";  // Adjusting by half the size to center it
+      dot.style.borderRadius = "50%";
+      dot.style.pointerEvents = "none"; // So it doesn't interfere with other mouse events
+      dot.style.padding = "0";  // Setting padding to zero
+      dot.style.margin = "0";  // Setting margin to zero
+      dot.style.transition = "opacity 1s";  // Setting transition for fading effect
+  
+      document.body.appendChild(dot);
+  
+      // Fade out the dot after a delay
+      setTimeout(function() {
+          dot.style.opacity = "0";
+          
+          // Remove the dot from the DOM after it's fully faded
+          setTimeout(function() {
+              dot.remove();
+          }, 10000);
+  
+      }, 3000);
+  }
+
+  window.addEventListener('mousemove', drawDotAtCoords);
+  
+	`
+
+	// mouseTrackingJS adds a global state of the last mouse position so we can
+	// start moving from the current mouse position instead of 0,0.
+	mouseTrackingJS = `
+  // Global storage on window object for mouse position
+  window.globalMousePos = { x: 0, y: 0 };
+  
+  window.addEventListener('mousemove', (event) => {
+      const x = event.x;
+      const y = event.y;
+  
+  		if (x > 0 || y > 0) {
+        window.globalMousePos = { x, y };
+  		}
+  
+  		console.log(x, y, event);
+  });
+  
+  // Function to get the current mouse position or default to zero
+  function getCurrentMousePosition() {
+      return window.globalMousePos || { x: 0, y: 0 };
+  }
+  `
+)
+
+// MouseMoveOptions contains options for mouse movement.
+type MouseMoveOptions struct {
+	steps          int
+	delayMin       time.Duration
+	delayMax       time.Duration
+	randomJitter   float64
+	visualizeMouse bool
+}
+
+// Default values for mouse movement.
+var defaultMouseMoveOptions = MouseMoveOptions{
+	steps:          20,
+	delayMin:       5 * time.Millisecond,
+	delayMax:       50 * time.Millisecond,
+	randomJitter:   3,
+	visualizeMouse: false,
+}
+
+// MoveOptionSetter defines a function type to set mouse move options.
+type MoveOptionSetter func(*MouseMoveOptions)
+
+// WithSteps returns a MoveOptionSetter that sets the number of steps for the mouse movement.
+func WithSteps(s int) MoveOptionSetter {
+	return func(opt *MouseMoveOptions) {
+		opt.steps = s
+	}
+}
+
+// WithDelayRange returns a MoveOptionSetter that sets the delay range between steps.
+func WithDelayRange(min, max time.Duration) MoveOptionSetter {
+	return func(opt *MouseMoveOptions) {
+		opt.delayMin = min
+		opt.delayMax = max
+	}
+}
+
+// WithRandomJitter returns a MoveOptionSetter that sets the random jitter to introduce in mouse movement.
+func WithRandomJitter(jitter float64) MoveOptionSetter {
+	return func(opt *MouseMoveOptions) {
+		opt.randomJitter = jitter
+	}
+}
+
+// WithVisualizeMouse returns a MoveOptionSetter that enables mouse movement visualization.
+func WithVisualizeMouse() MoveOptionSetter {
+	return func(opt *MouseMoveOptions) {
+		opt.visualizeMouse = true
+	}
+}
+
+// MoveMouseToPosition moves the mouse to the given position, mimic random human mouse movements.
+//
+// If desired you can tweak the mouse movement behavior, defaults are set to mimic human mouse movements.
+func MoveMouseToPosition(x, y float64, setters ...MoveOptionSetter) chromedp.ActionFunc { //nolint:varnamelen
+	options := defaultMouseMoveOptions
+
+	for _, setter := range setters {
+		setter(&options)
+	}
+
+	return func(ctx context.Context) error {
+		var pos struct {
+			X float64 `json:"x"`
+			Y float64 `json:"y"`
+		}
+
+		if err := chromedp.Evaluate(`getCurrentMousePosition()`, &pos).Do(ctx); err != nil {
+			if err := chromedp.Evaluate(mouseTrackingJS, nil).Do(ctx); err != nil {
+				return fmt.Errorf("inject mouse position tracing js: %w", err)
+			}
+		}
+
+		// Add mouse visualization event listener if enabled.
+		if options.visualizeMouse {
+			if err := chromedp.Evaluate(addMouseVisualsJS, nil).Do(ctx); err != nil {
+				return fmt.Errorf("inject mouse visualization js: %w", err)
+			}
+
+			// Remove mouse visualization event listere after mouse movemvent is complete.
+			defer func() {
+				chromedp.Evaluate(removeMouseVisualsJS, nil).Do(ctx) //nolint:errcheck,gosec
+			}()
+		}
+
+		// Generate control points for Bezier curve.
+		control1 := point{
+			x: pos.X + rand.Float64()*math.Max(x-pos.X, (y-pos.Y)/2),
+			y: pos.Y + rand.Float64()*math.Max(y-pos.Y, (x-pos.X)/2),
+		}
+
+		control2 := point{
+			x: x - rand.Float64()*(x-pos.X),
+			y: y - rand.Float64()*(y-pos.Y),
+		}
+
+		start := point{x: pos.X, y: pos.Y}
+		end := point{x: x, y: y}
+
+		for i := 0; i <= options.steps; i++ {
+			t := float64(i) / float64(options.steps)
+			point := bezierCubic(start, control1, control2, end, t)
+
+			targetX := point.x + rand.Float64()*options.randomJitter - options.randomJitter
+			targetY := point.y + rand.Float64()*options.randomJitter - options.randomJitter
+
+			p := &input.DispatchMouseEventParams{
+				Type:   input.MouseMoved,
+				X:      targetX,
+				Y:      targetY,
+				Button: input.None,
+			}
+
+			if err := p.Do(ctx); err != nil {
+				return err
+			}
+
+			sleepDuration := options.delayMin + time.Duration(rand.Int63n(int64(options.delayMax-options.delayMin)))
+			time.Sleep(sleepDuration)
+		}
+
+		return nil
+	}
+}
+
+type point struct {
+	x, y float64
+}
+
+// Returns a point along a cubic Bézier curve.
+// t is the "progress" along the curve, should be between 0 and 1.
+func bezierCubic(p0, p1, p2, p3 point, t float64) point {
+	mt := 1 - t
+	mt2 := mt * mt
+	t2 := t * t
+
+	return point{
+		x: mt2*mt*p0.x + 3*mt2*t*p1.x + 3*mt*t2*p2.x + t2*t*p3.x,
+		y: mt2*mt*p0.y + 3*mt2*t*p1.y + 3*mt*t2*p2.y + t2*t*p3.y,
+	}
 }

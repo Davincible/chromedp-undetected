@@ -90,3 +90,32 @@ func TestCookiesExtract(t *testing.T) {
 		},
 	)
 }
+
+func TestRunMouse(t *testing.T) {
+
+	testRun(t,
+		n,
+		NewConfig(
+			WithTimeout(20*time.Second),
+			// WithHeadless(),
+		),
+		func(ctx context.Context) error {
+			sleep := time.Second * 1
+			return chromedp.Run(ctx,
+				chromedp.Navigate("https://www.example.com/"),
+				chromedp.Evaluate("document.body.style.cursor = 'pointer'", nil),
+				// chromedp.Evaluate(coordinateCode, nil),
+				chromedp.Sleep(sleep),
+				MoveMouseToPosition(200, 200, WithVisualizeMouse()),
+				chromedp.Sleep(sleep),
+				MoveMouseToPosition(200, 500, WithVisualizeMouse()),
+				chromedp.Sleep(sleep),
+				MoveMouseToPosition(600, 500, WithVisualizeMouse()),
+				chromedp.Sleep(sleep),
+				MoveMouseToPosition(600, 200, WithVisualizeMouse()),
+				chromedp.Sleep(sleep),
+				MoveMouseToPosition(200, 200, WithVisualizeMouse()),
+			)
+		},
+	)
+}

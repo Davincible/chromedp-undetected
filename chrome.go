@@ -116,7 +116,9 @@ func noSandboxFlag(config Config) []chromedp.ExecAllocatorOption {
 	if config.NoSandbox {
 		opts = append(opts,
 			chromedp.Flag("no-sandbox", true),
-			chromedp.Flag("test-type", true))
+			chromedp.Flag("test-type", true),
+			chromedp.Flag("disable-dev-shm-usage", true),
+		)
 	}
 
 	return opts
