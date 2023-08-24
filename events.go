@@ -16,7 +16,7 @@ type IdleEvent struct {
 	IsIdle bool
 }
 
-// NetworkIdlePermanentListener sets up a listener to monitor for network idle events.
+// NetworkIdleListener sets up a listener to monitor for network idle events.
 //
 // This can be used as a proxy to know for e.g. when a page has fully loaded, assuming
 // that the page doesn't send any network requests within the networkIdleTimeout period
