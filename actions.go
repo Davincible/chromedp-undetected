@@ -82,6 +82,7 @@ func LoadCookies(cookies []Cookie) chromedp.ActionFunc {
 				return err
 			}
 		}
+
 		return nil
 	})
 }
