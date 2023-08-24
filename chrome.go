@@ -44,6 +44,10 @@ func New(config Config) (context.Context, context.CancelFunc, error) {
 		opts = append(opts, chromedp.Flag("lang", config.Language))
 	}
 
+	if len(config.Extensions) > 0 {
+		opts = append(opts, chromedp.Flag("load-extension", strings.Join(config.Extensions, ",")))
+	}
+
 	opts = append(opts, supressWelcomeFlag()...)
 	opts = append(opts, logLevelFlag(config))
 	opts = append(opts, debuggerAddrFlag(config)...)

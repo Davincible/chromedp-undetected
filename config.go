@@ -59,6 +59,9 @@ type Config struct {
 	// Requires Xvfb to be installed, only available on Linux.
 	Headless bool `json:"headless" yaml:"headless"`
 
+	// Extensions are the paths to the extensions to load.
+	Extensions []string `json:"extensions" yaml:"extensions"`
+
 	// language to be used otherwise system/OS defaults are used
 	// https://developer.chrome.com/docs/webstore/i18n/#localeTable
 	Language string
@@ -137,5 +140,14 @@ func WithLogLevel(level int) Option {
 func WithChromeFlags(opts ...chromedp.ExecAllocatorOption) Option {
 	return func(c *Config) {
 		c.ChromeFlags = append(c.ChromeFlags, opts...)
+	}
+}
+
+// WithExtensions adds chrome extensions.
+//
+// Provide the paths to the extensions to load.
+func WithExtensions(extensions ...string) Option {
+	return func(c *Config) {
+		c.Extensions = append(c.Extensions, extensions...)
 	}
 }
