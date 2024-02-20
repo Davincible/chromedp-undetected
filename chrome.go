@@ -55,7 +55,11 @@ func New(config Config) (context.Context, context.CancelFunc, error) {
 	opts = append(opts, chromedp.UserDataDir(config.UserDataDir))
 	opts = append(opts, headlessOpts...)
 	opts = append(opts, config.ChromeFlags...)
-
+	
+	if config.ChromePath != "" {
+		opts = append(opts, chromedp.ExecPath(config.ChromePath))
+	}
+	
 	ctx := context.Background()
 	if config.Ctx != nil {
 		ctx = config.Ctx
