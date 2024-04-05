@@ -33,6 +33,10 @@ func New(config Config) (context.Context, context.CancelFunc, error) {
 		config.UserDataDir = path.Join(os.TempDir(), DefaultUserDirPrefix+uuid.NewString())
 	}
 
+	if config.ChromePath != "" {
+		opts = append(opts, chromedp.ExecPath(config.ChromePath))
+	}
+
 	headlessOpts, closeFrameBuffer, err := headlessFlag(config)
 	if err != nil {
 		return nil, func() {}, err
