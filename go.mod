@@ -8,8 +8,7 @@ require (
 	github.com/chromedp/chromedp v0.9.2
 	github.com/google/uuid v1.3.0
 	github.com/hashicorp/go-multierror v1.1.1
-	github.com/mailru/easyjson v0.7.7
-	github.com/sanity-io/litter v1.5.5
+	github.com/mailru/easyjson v0.9.0
 	github.com/stretchr/testify v1.8.1
 	golang.org/x/exp v0.0.0-20221217163422-3c43f8badb15
 )
